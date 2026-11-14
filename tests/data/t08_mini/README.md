@@ -1,4 +1,4 @@
-# Graph mini T08 (viết tay, OWNER: M4)
+# Graph mini T08
 
 Bộ gold nhỏ để chứng minh pipeline đúng khi **không có `gt/`** của giảng viên (xem docs/PLAN_T08.md mục 5).
 16 artefact, 3 yêu cầu, 18 dòng đáp án. ID (`m01`..) và subject (`mini_*`) cố ý khác fixture thật:
