@@ -70,11 +70,15 @@ def test_review_scores_order_direct_hold_derived_exception_and_delete():
     assert held["score"] > derivative["score"] > escalation["score"] > ordinary_delete["score"]
 
 
-def test_policy_yaml_has_sources_and_no_unresolved_placeholders():
+def test_policy_yaml_has_ordered_rules_sources_scores_and_official_links():
     config = yaml.safe_load(POLICY_PATH.read_text(encoding="utf-8"))
     assert [rule["id"] for rule in config["rules"]] == [f"R{i}" for i in range(1, 8)]
     assert all(rule.get("source") and "TODO" not in rule["source"] for rule in config["rules"])
     assert set(config["review_scores"]) == {"retain_legal_hold", "escalate", "delete_derived_from_held", "delete"}
+    assert "https://vanban.chinhphu.vn/?pageid=27160&docid=214590" in config["rules"][0]["source"]
+    assert "Điều 14 khoản 2" in config["rules"][0]["source"]
+    assert "https://eur-lex.europa.eu/eli/reg/2016/679/art_17/oj/eng" in config["rules"][0]["source"]
+    assert "https://vanban.chinhphu.vn/?pageid=27160&docid=214590" in config["rules"][6]["source"]
 
 
 def test_fixture_policy_counts_match_plan_after_private_line_ending_normalization(tmp_path):

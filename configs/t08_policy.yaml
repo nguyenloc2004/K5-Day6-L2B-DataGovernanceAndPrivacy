@@ -1,6 +1,6 @@
 # T08 deletion policy — OWNER: M3. Rules are evaluated top-to-bottom.
-# Training policy only; not legal advice. Verify source provisions against official texts.
-version: 0.2.0
+# Training policy only; not legal advice. Verify cited texts/applicability with counsel/DPO.
+version: 0.3.0
 policy_owner: "TrinhDucHung <hungductrinh2004@gmail.com>"
 effective_date: 2026-11-14
 hold_scope_default: direct
@@ -14,36 +14,36 @@ rules:
     when: artefact_legal_hold
     action: retain_legal_hold
     reason_code: LEGAL_HOLD_ACTIVE
-    source: "GDPR Article 17(3)(b),(e); Vietnam Law 91/2025/QH15 Article 14(2), read with Article 19 — applicability must be confirmed by counsel/DPO for each case."
-    audit_note: "Retain while the recorded hold is active; record its hold ID and review/reassess when the hold expires."
+    source: "GDPR Article 17(3)(b),(e), official EU text: https://eur-lex.europa.eu/eli/reg/2016/679/art_17/oj/eng ; Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15, Điều 14 khoản 2 dẫn chiếu Điều 19, bản tiếng Việt chính thức: https://vanban.chinhphu.vn/?pageid=27160&docid=214590 . Phạm vi áp dụng ngoại lệ cần DPO/pháp chế xác nhận cho từng trường hợp."
+    audit_note: "Giữ khi lệnh giữ pháp lý còn hiệu lực; ghi mã hold, rà soát và xem xét xóa khi hết hiệu lực."
   - id: R2
     when: identity_unverified
     action: escalate
     reason_code: IDENTITY_UNVERIFIED
-    source: "Group safety policy; verify the requester before acting on a deletion request."
+    source: "Chính sách an toàn của nhóm: cần xác minh người yêu cầu trước khi xử lý. Đây là kiểm soát quy trình, không phải kết luận pháp lý."
   - id: R3
     when: no_delete_permission
     action: escalate
     reason_code: NO_DELETE_PERMISSION
-    source: "Group access-control policy; obtain authorization from the data controller/operator before deletion."
+    source: "Chính sách kiểm soát truy cập của nhóm: cần có quyền hoặc ủy quyền từ bên kiểm soát dữ liệu trước khi xóa."
   - id: R4
     when: unknown_origin
     action: escalate
     reason_code: UNKNOWN_ORIGIN
-    source: "Group provenance policy; resolve origin/lineage before deletion."
+    source: "Chính sách provenance của nhóm: cần xác định nguồn gốc và lineage trước khi quyết định xóa."
   - id: R5
     when: multi_subject
     action: escalate
     reason_code: MULTI_SUBJECT
-    source: "Group minimization and shared-record safeguard; a human must choose a safe remediation."
+    source: "Biện pháp bảo vệ của nhóm: chuyển người duyệt chọn biện pháp không làm ảnh hưởng dữ liệu/chủ thể khác."
   - id: R6
     when: held_ancestor_and_scope_descendants
     action: retain_legal_hold
     reason_code: DERIVED_FROM_HELD
-    source: "Experiment switch only: enabled when hold_scope=descendants; legal applicability must be confirmed by counsel/DPO."
-    audit_note: "Record the nearest held ancestor ID."
+    source: "Chỉ áp dụng trong thí nghiệm hold_scope=descendants; đối chiếu Luật 91/2025/QH15 Điều 14 khoản 2, Điều 19 và GDPR Điều 17(3) theo từng trường hợp; cần DPO/pháp chế xác nhận. Luật Việt Nam bản gốc tiếng Việt: https://vanban.chinhphu.vn/?pageid=27160&docid=214590 ."
+    audit_note: "Ghi mã hold của tổ tiên gần nhất."
   - id: R7
     when: default
     action: delete
     reason_code: SUBJECT_ONLY
-    source: "Vietnam Law 91/2025/QH15 Article 14(1) (deletion cases); GDPR Article 17(1) where applicable; group scope/authorization assumptions must hold."
+    source: "Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15, Điều 14 khoản 1 (các trường hợp xóa/hủy), bản tiếng Việt chính thức: https://vanban.chinhphu.vn/?pageid=27160&docid=214590 ; GDPR Điều 17(1), EUR-Lex: https://eur-lex.europa.eu/eli/reg/2016/679/art_17/oj/eng . Chỉ là căn cứ tham khảo; kết quả phụ thuộc phạm vi yêu cầu, chủ thể xử lý, căn cứ áp dụng và các ngoại lệ."
