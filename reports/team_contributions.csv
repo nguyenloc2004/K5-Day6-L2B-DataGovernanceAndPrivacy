@@ -1,6 +1,7 @@
 member,git_author_name,git_email,role,modules_files,commit_shas,evidence_note,presenter
-Member 1,,,Lead / Integrator,src/main.py; configs/,,,
-Member 2,,,Data & fixtures,fixtures/; tools/,,,
-Member 3,,,Core algorithm,src/pipeline.py,,,
-Member 4,,,QA / metric,tests/; reports/metrics_*.json,,,
-Member 5,,,Human review + report,reports/group_report.md; demo/,,,
+Member 1,nguyenloc2004,nguyenhuuloc.122004@gmail.com,Lead / Integrator,src/pipeline.py; configs/lab.yaml,,Scaffold and pipeline wiring,yes
+Member 2,Pynda,buisytungk25cntt@gmail.com,Data & Lineage,src/t08/loader.py; src/t08/lineage.py,,Loader and lineage traversal,yes
+Member 3,TrinhDucHung,hungductrinh2004@gmail.com,Core algorithm / Policy,src/t08/policy.py; configs/t08_policy.yaml,,Policy precedence rules,yes
+Member 4,hurtmyneck,duongdung04bg@gmail.com,QA / metric / tests,src/t08/baseline.py; tests/data/t08_mini/,,Baseline and mini gold tests,yes
+Member 5,hainam08012004,Khongcomatkhau@2005,Human review + report,src/t08/audit.py; reports/group_report.md,,Audit logging and group report,yes
+
