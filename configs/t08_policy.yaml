@@ -1,0 +1,40 @@
+# T08 deletion policy — OWNER: M3. Xét từ trên xuống, khớp luật nào thì dừng.
+# Tình huống học tập, không phải tư vấn pháp lý. Số điều khoản cần đối chiếu văn bản gốc.
+version: 0.1.0
+effective_date: 2026-11-14
+rules:
+  - id: R1
+    when: artefact_legal_hold
+    action: retain_legal_hold
+    reason_code: LEGAL_HOLD_ACTIVE
+    source: "GDPR Art. 17(3)(b),(e); Luật 91/2025 (ngoại lệ quyền xóa) — TODO M3 đối chiếu"
+  - id: R2
+    when: identity_unverified
+    action: escalate
+    reason_code: IDENTITY_UNVERIFIED
+    source: "TODO M3"
+  - id: R3
+    when: no_delete_permission
+    action: escalate
+    reason_code: NO_DELETE_PERMISSION
+    source: "TODO M3"
+  - id: R4
+    when: unknown_origin
+    action: escalate
+    reason_code: UNKNOWN_ORIGIN
+    source: "TODO M3"
+  - id: R5
+    when: multi_subject
+    action: escalate
+    reason_code: MULTI_SUBJECT
+    source: "TODO M3"
+  - id: R6
+    when: held_ancestor_and_scope_descendants
+    action: retain_legal_hold
+    reason_code: DERIVED_FROM_HELD
+    source: "Chỉ bật khi params.hold_scope = descendants (ablation)"
+  - id: R7
+    when: default
+    action: delete
+    reason_code: SUBJECT_ONLY
+    source: "GDPR Art. 17(1); Luật 91/2025 — TODO M3"

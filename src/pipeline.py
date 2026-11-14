@@ -1,19 +1,14 @@
-"""YOUR PoC PIPELINE — this is the file your group owns.
+"""T08 PoC pipeline — wiring only. OWNER: M1. Logic lives in src/t08/ (see CONTRIBUTING.md).
 
 Lab contract = 5 automated steps, run by `python -m src.main ...`:
-    01 load      input + provenance check (manifest.csv)
-    02 process   your algorithm / model (the research part)
-    03 rank      prioritise for a fixed review budget B
-    04 review    human-in-the-loop: queue -> reviewer decisions -> overrides + audit log
-    05 decide    GO / HOLD / REWORK (or track equivalent) with reason_code + owner, write outputs
+    01 load      input + provenance check (manifest.csv)              -> t08.loader   (M2)
+    02 process   scope + lineage + policy for every (request, artefact) -> t08.lineage (M2), t08.policy (M3)
+    03 rank      review queue top-B (exceptions first)                -> here (M1)
+    04 review    reviewer overrides + audit log                       -> t08.audit    (M5)
+    05 decide    GO / HOLD with reason_code + owner                   -> here (M1)
 
-Required output: out/<pred_file> with the columns listed for your track in
-docs/tracks/TXX.md (also in src/metrics/tracks.py::TRACKS). Then evaluate with
-    python -m src.evaluate --track tXX --pred out/<pred_file>
-
-Rules: never read fixtures/*/gt/ here (the GT guard will stop you); seed everything via ctx.rng;
-no network calls; fail loudly on missing models instead of downloading.
-See src/examples/random_baseline.py for a minimal end-to-end wiring example.
+Output: out/actions.csv (request_id, artefact_id, action) + audit_log.jsonl + review_queue.csv + decision.json.
+Rules: never read fixtures/*/gt/; no network; no hard-coded artefact ids (graded on a hidden set).
 """
 from __future__ import annotations
 
@@ -24,6 +19,8 @@ from .common.decision import Decision, write_decision
 from .common.manifest import verify_manifest
 from .common.review import load_review_decisions, make_review_queue, write_review_queue
 from .metrics.tracks import get_track
+from .t08 import audit, lineage, loader, policy
+from .t08.contracts import ACTIONS, SCORED_COLUMNS, item_id
 
 
 # ---------------------------------------------------------------- 01 load
@@ -34,62 +31,85 @@ def load(ctx: RunContext) -> dict:
         ctx.audit.log(actor="pipeline", action="provenance_problems", item_id=str(manifest), after=problems[:20])
         if ctx.config.get("strict_provenance", True):
             raise ValueError(f"provenance check failed ({len(problems)} problems), first: {problems[:3]}")
-    data = {"manifest": pd.read_csv(manifest) if manifest.exists() else None}
-    # TODO: load the tables/images your track needs, e.g.
-    # data["images"] = pd.read_csv(ctx.input_dir / "images.csv")
-    return data
+    graph, requests = loader.load_inputs(ctx.input_dir)
+    index = lineage.build_index(graph)
+    for w in index.get("warnings", []):
+        ctx.audit.log(actor="pipeline", action="data_warning", item_id=str(w.get("artefact_id", "")), after=w)
+    ctx.stats.update(n_artefacts=len(graph), n_requests=len(requests), n_data_warnings=len(index.get("warnings", [])))
+    return {"graph": graph, "requests": requests, "index": index}
 
 
 # ---------------------------------------------------------------- 02 process
 def process(ctx: RunContext, data: dict) -> pd.DataFrame:
-    spec = get_track(ctx.track)
-    raise NotImplementedError(
-        f"Implement process() for {spec.track} ({spec.title}). It must produce a DataFrame with at least "
-        f"{spec.pred_columns} (saved as out/{spec.pred_file}). See docs/tracks/{spec.track.upper()}.md"
-    )
+    graph, params = data["graph"], ctx.config.get("params") or {}
+    rows = []
+    for req in data["requests"]:
+        for aid in lineage.scope_for(graph, req["subject_id"]):
+            art = graph[aid]
+            info = {"held_ancestor": lineage.held_ancestor(graph, aid), "lineage_path": lineage.lineage_path(graph, aid)}
+            d = policy.decide_action(art, req, info, params)
+            if d["action"] not in ACTIONS:
+                raise ValueError(f"policy returned invalid action {d['action']!r} for {req['request_id']}/{aid}")
+            rows.append({
+                "request_id": req["request_id"], "artefact_id": aid, "action": d["action"],
+                "item_id": item_id(req["request_id"], aid), "score": float(d["score"]),
+                "reason": d["reason_code"], "rule_id": d["rule_id"],
+                "type": art.get("type", ""), "subject_ids": ";".join(art.get("subject_ids", [])),
+                "lineage_path": info["lineage_path"], "held_ancestor": info["held_ancestor"] or "",
+                "deadline": req.get("deadline", ""),
+            })
+    df = pd.DataFrame(rows, columns=SCORED_COLUMNS)
+    if df.duplicated(["request_id", "artefact_id"]).any():
+        raise ValueError("duplicate (request_id, artefact_id) rows — scope_for must return unique ids")
+    return df.sort_values(["request_id", "artefact_id"], kind="mergesort").reset_index(drop=True)
 
 
 # ---------------------------------------------------------------- 03 rank
 def rank(ctx: RunContext, scored: pd.DataFrame) -> pd.DataFrame:
-    """Default: top-B by `score`. Adapt id/score/reason columns to your track."""
-    budget = int(ctx.param("budget", 20))
-    if "score" not in scored.columns:
-        raise ValueError("rank(): process() output needs a numeric `score` column (higher = review first), "
-                         "or adapt rank() to your track")
-    q = make_review_queue(scored, id_col=scored.columns[0], score_col="score", budget=budget,
-                          reason_col="reason" if "reason" in scored.columns else None)
+    """Top-B by score; ties broken by nearer deadline, then id (deterministic)."""
+    budget = int(ctx.param("budget", 60))
+    ordered = scored.sort_values(["score", "deadline", "item_id"], ascending=[False, True, True], kind="mergesort")
+    q = make_review_queue(ordered, id_col="item_id", score_col="score", budget=budget,
+                          reason_col="reason", action_col="action", slice_col="type")
     write_review_queue(q, ctx.out("review_queue.csv"))
+    ctx.stats["n_queue"] = len(q)
     return q
 
 
 # ---------------------------------------------------------------- 04 review
 def review(ctx: RunContext, scored: pd.DataFrame, queue: pd.DataFrame) -> pd.DataFrame:
-    """If a reviewed queue exists (out/review_queue_reviewed.csv), apply it. Otherwise pass through.
-
-    TODO: decide what an `edit` / `reject` means for your track and apply it
-    (e.g. via common.review.apply_overrides), logging every change to ctx.audit.
-    """
     reviewed_path = ctx.output_dir / "review_queue_reviewed.csv"
-    if reviewed_path.exists():
-        reviewed = load_review_decisions(reviewed_path)
-        ctx.stats["n_reviewed"] = len(reviewed)
-        # TODO: apply overrides
-    return scored
+    reviewed = load_review_decisions(reviewed_path) if reviewed_path.exists() else None
+    ctx.stats["n_reviewed"] = 0 if reviewed is None else len(reviewed)
+    final = audit.apply_review(ctx, scored, reviewed)
+    audit.write_audit(ctx, final)
+    return final
 
 
 # ---------------------------------------------------------------- 05 decide
 def decide(ctx: RunContext, final: pd.DataFrame) -> Decision:
-    # TODO: replace with your policy (thresholds frozen BEFORE looking at eval results)
-    return Decision(status="HOLD", reason_code="POLICY_NOT_IMPLEMENTED", reason="Decision policy not implemented yet",
-                    owner=ctx.config.get("owner", "TODO-owner"), scope=ctx.track)
+    owner = ctx.config.get("owner", "TODO-owner")
+    counts = final["action"].value_counts().to_dict()
+    pending = int((final["action"] == "escalate").sum()) - int(ctx.stats.get("n_reviewed", 0))
+    if ctx.stats.get("n_data_warnings", 0):
+        return Decision(status="HOLD", reason_code="DATA_WARNINGS", owner=owner, scope=ctx.track, metrics=counts,
+                        reason=f"{ctx.stats['n_data_warnings']} lineage/data warnings must be resolved before deleting")
+    if pending > 0:
+        return Decision(status="HOLD", reason_code="ESCALATIONS_PENDING_REVIEW", owner=owner, scope=ctx.track, metrics=counts,
+                        reason=f"{pending} escalated item(s) still need a human decision")
+    return Decision(status="GO", reason_code="ALL_ITEMS_RESOLVED", owner=owner, scope=ctx.track, metrics=counts,
+                    reason="Every in-scope artefact has a final action; exceptions reviewed")
 
 
 def run(ctx: RunContext) -> None:
     spec = get_track(ctx.track)
+    if spec.track != "t08":
+        raise NotImplementedError(f"this group's pipeline implements t08 only, not {spec.track}")
     data = load(ctx)
     scored = process(ctx, data)
     ctx.stats["n_items"] = len(scored)
     queue = rank(ctx, scored)
     final = review(ctx, scored, queue)
-    final[spec.pred_columns + [c for c in final.columns if c not in spec.pred_columns]].to_csv(ctx.out(spec.pred_file), index=False)
+    extra = [c for c in final.columns if c not in spec.pred_columns]
+    final[spec.pred_columns + extra].to_csv(ctx.out(spec.pred_file), index=False)
     write_decision(decide(ctx, final), ctx.out("decision.json"), ctx.out("decision_log.csv"))

@@ -2,15 +2,21 @@
 # Group config — EDIT ME (one per group). Values here override
 # the track defaults loaded from `track_config`.
 # ============================================================
-group_id: G00                     # e.g. G07
-owner: "TODO: tên người ký duyệt (role)"   # mandatory for every Decision
-track_config: tracks/t02.yaml     # pick your challenge: tracks/t01.yaml ... tracks/t14.yaml
-track: t02                        # must match track_config
-input: fixtures/t02_raw_qc        # or data/real/... if your instructor provided a real pack
+group_id: G00                     # TODO: điền mã nhóm, ví dụ G07
+owner: "Nguyen Huu Loc (Lead / DPO-proxy)"   # người ký duyệt mọi Decision
+track_config: tracks/t08.yaml
+track: t08
+input: fixtures/t08_deletion
 output: out/
 seed: 42
 offline: true                     # demo/eval must not touch the network
 strict_provenance: true           # fail if manifest.csv hashes do not match
 
 # Track params (merged over track_config.params). Freeze before evaluation.
-params: {}
+# Chốt ngày 2026-11-14 (xem docs/PLAN_T08.md mục 3). Không đổi sau khi thấy điểm.
+params:
+  dry_run: true
+  hold_scope: direct              # Q1: direct = hold chỉ áp dụng cho artefact có legal_hold; descendants = lan xuống con cháu
+  budget: 60                      # Q3: số dòng tối đa trong review queue
+  operator_acl: data-platform     # đơn vị vận hành có quyền xóa
+  policy_file: configs/t08_policy.yaml
