@@ -1,40 +1,49 @@
-# T08 deletion policy — OWNER: M3. Xét từ trên xuống, khớp luật nào thì dừng.
-# Tình huống học tập, không phải tư vấn pháp lý. Số điều khoản cần đối chiếu văn bản gốc.
-version: 0.1.0
+# T08 deletion policy — OWNER: M3. Rules are evaluated top-to-bottom.
+# Training policy only; not legal advice. Verify source provisions against official texts.
+version: 0.2.0
+policy_owner: "TrinhDucHung <hungductrinh2004@gmail.com>"
 effective_date: 2026-11-14
+hold_scope_default: direct
+review_scores:
+  retain_legal_hold: 3.0
+  delete_derived_from_held: 2.5
+  escalate: 2.0
+  delete: 0.0
 rules:
   - id: R1
     when: artefact_legal_hold
     action: retain_legal_hold
     reason_code: LEGAL_HOLD_ACTIVE
-    source: "GDPR Art. 17(3)(b),(e); Luật 91/2025 (ngoại lệ quyền xóa) — TODO M3 đối chiếu"
+    source: "GDPR Article 17(3)(b),(e); Vietnam Law 91/2025/QH15 Article 14(2), read with Article 19 — applicability must be confirmed by counsel/DPO for each case."
+    audit_note: "Retain while the recorded hold is active; record its hold ID and review/reassess when the hold expires."
   - id: R2
     when: identity_unverified
     action: escalate
     reason_code: IDENTITY_UNVERIFIED
-    source: "TODO M3"
+    source: "Group safety policy; verify the requester before acting on a deletion request."
   - id: R3
     when: no_delete_permission
     action: escalate
     reason_code: NO_DELETE_PERMISSION
-    source: "TODO M3"
+    source: "Group access-control policy; obtain authorization from the data controller/operator before deletion."
   - id: R4
     when: unknown_origin
     action: escalate
     reason_code: UNKNOWN_ORIGIN
-    source: "TODO M3"
+    source: "Group provenance policy; resolve origin/lineage before deletion."
   - id: R5
     when: multi_subject
     action: escalate
     reason_code: MULTI_SUBJECT
-    source: "TODO M3"
+    source: "Group minimization and shared-record safeguard; a human must choose a safe remediation."
   - id: R6
     when: held_ancestor_and_scope_descendants
     action: retain_legal_hold
     reason_code: DERIVED_FROM_HELD
-    source: "Chỉ bật khi params.hold_scope = descendants (ablation)"
+    source: "Experiment switch only: enabled when hold_scope=descendants; legal applicability must be confirmed by counsel/DPO."
+    audit_note: "Record the nearest held ancestor ID."
   - id: R7
     when: default
     action: delete
     reason_code: SUBJECT_ONLY
-    source: "GDPR Art. 17(1); Luật 91/2025 — TODO M3"
+    source: "Vietnam Law 91/2025/QH15 Article 14(1) (deletion cases); GDPR Article 17(1) where applicable; group scope/authorization assumptions must hold."
