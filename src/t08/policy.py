@@ -53,9 +53,12 @@ def _load_policy(path_string: str) -> dict[str, Any]:
     return data
 
 
-def _decision(policy: dict[str, Any], rule_id: str, score_key: str) -> Decision:
+def _decision(policy: dict[str, Any], rule_id: str, score_key: str, action: str | None = None) -> Decision:
     rule = next(rule for rule in policy["rules"] if rule["id"] == rule_id)
-    return Decision(action=rule["action"], reason_code=rule["reason_code"], rule_id=rule_id,
+    selected_action = action or rule["action"]
+    if selected_action not in ACTIONS:
+        raise ValueError(f"invalid configured action {selected_action!r} for policy rule {rule_id}")
+    return Decision(action=selected_action, reason_code=rule["reason_code"], rule_id=rule_id,
                     score=policy["review_scores"][score_key])
 
 
@@ -74,13 +77,11 @@ def decide_action(artefact: Artefact, request: Request, info: dict, params: dict
     Missing identity/ACL/provenance signals fail closed to review rather than
     authorizing a deletion.
     """
-    params = params or {}
-    hold_scope = str(params.get("hold_scope", "direct"))
-    if hold_scope not in _ALLOWED_HOLD_SCOPES:
-        raise ValueError(f"invalid hold_scope {hold_scope!r}; expected one of {sorted(_ALLOWED_HOLD_SCOPES)}")
-
     policy_path = Path(params.get("policy_file") or _DEFAULT_POLICY_PATH)
     policy = _load_policy(str(policy_path.expanduser().resolve()))
+    hold_scope = str(params.get("hold_scope", policy.get("hold_scope_default", "direct")))
+    if hold_scope not in _ALLOWED_HOLD_SCOPES:
+        raise ValueError(f"invalid hold_scope {hold_scope!r}; expected one of {sorted(_ALLOWED_HOLD_SCOPES)}")
 
     # R1: an explicit hold marker takes precedence over all other conditions.
     if _has_active_hold(artefact):
@@ -111,9 +112,7 @@ def decide_action(artefact: Artefact, request: Request, info: dict, params: dict
         return _decision(policy, "R6", "retain_legal_hold")
     if held_ancestor:
         # Direct scope deletes the derivative but elevates it in the review queue.
-        rule = next(rule for rule in policy["rules"] if rule["id"] == "R6")
-        return Decision(action="delete", reason_code=rule["reason_code"], rule_id="R6",
-                        score=policy["review_scores"]["delete_derived_from_held"])
+        return _decision(policy, "R6", "delete_derived_from_held", action="delete")
 
     # R7: only a verified, permitted, known-origin, subject-only artefact reaches delete.
     return _decision(policy, "R7", "delete")

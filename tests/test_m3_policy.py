@@ -1,6 +1,9 @@
 """M3 policy unit tests; no fixture artefact IDs or legal outcome assertions."""
 from pathlib import Path
 
+import shutil
+
+import pytest
 import yaml
 
 from src.t08.policy import decide_action
@@ -72,3 +75,35 @@ def test_policy_yaml_has_sources_and_no_unresolved_placeholders():
     assert [rule["id"] for rule in config["rules"]] == [f"R{i}" for i in range(1, 8)]
     assert all(rule.get("source") and "TODO" not in rule["source"] for rule in config["rules"])
     assert set(config["review_scores"]) == {"retain_legal_hold", "escalate", "delete_derived_from_held", "delete"}
+
+
+def test_fixture_policy_counts_match_plan_after_private_line_ending_normalization(tmp_path):
+    # Git on this Windows host checked out tracked fixture text as CRLF despite
+    # .gitattributes. Normalize copies only; leave original fixture files intact.
+    fixture = tmp_path / "fixture"
+    shutil.copytree(PROJECT_ROOT / "fixtures" / "t08_deletion", fixture)
+    for name in ("data_graph.json", "requests.json"):
+        path = fixture / name
+        path.write_bytes(path.read_bytes().replace(b"\r\n", b"\n"))
+
+    from src.t08 import lineage
+    from src.t08.loader import load_inputs
+
+    graph, requests = load_inputs(fixture)
+    lineage.build_index(graph)
+    rows = []
+    for request in requests:
+        for artefact_id in lineage.scope_for(graph, request["subject_id"]):
+            artefact = graph[artefact_id]
+            info = {
+                "held_ancestor": lineage.held_ancestor(graph, artefact_id),
+                "lineage_path": lineage.lineage_path(graph, artefact_id),
+            }
+            rows.append((artefact, decide_action(artefact, request, info, PARAMS)))
+
+    assert len(rows) == 158
+    assert sum(result["action"] == "delete" for _, result in rows) == 128
+    assert sum(result["action"] == "retain_legal_hold" for _, result in rows) == 2
+    assert sum(result["action"] == "escalate" for _, result in rows) == 28
+    assert all(result["action"] != "delete" for art, result in rows if art.get("legal_hold"))
+    assert all(result["action"] == "escalate" for art, result in rows if len(art.get("subject_ids", [])) > 1)
