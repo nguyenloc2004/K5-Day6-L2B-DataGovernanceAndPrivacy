@@ -39,6 +39,8 @@ def _load_policy(path_string: str) -> dict[str, Any]:
             raise ValueError(f"invalid action in T08 policy rule {rule['id']}: {rule.get('action')!r}")
         if not rule.get("reason_code") or not rule.get("source"):
             raise ValueError(f"T08 policy rule {rule['id']} must include reason_code and source")
+        if rule["id"] == "R6" and rule.get("action") != "retain_legal_hold":
+            raise ValueError("T08 policy R6 must configure retain_legal_hold for descendants scope")
 
     scores = data.get("review_scores")
     if not isinstance(scores, dict) or set(scores) != _REQUIRED_SCORE_KEYS:
