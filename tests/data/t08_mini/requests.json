@@ -1,0 +1,26 @@
+[
+ {
+  "request_id": "MR-1",
+  "subject_id": "mini_alice",
+  "received_at": "2026-11-01T09:00:00+07:00",
+  "deadline": "2026-12-01T09:00:00+07:00",
+  "channel": "app",
+  "identity_verified": true
+ },
+ {
+  "request_id": "MR-2",
+  "subject_id": "mini_bob",
+  "received_at": "2026-11-02T09:00:00+07:00",
+  "deadline": "2026-12-02T09:00:00+07:00",
+  "channel": "app",
+  "identity_verified": true
+ },
+ {
+  "request_id": "MR-3",
+  "subject_id": "mini_cara",
+  "received_at": "2026-11-03T09:00:00+07:00",
+  "deadline": "2026-12-03T09:00:00+07:00",
+  "channel": "app",
+  "identity_verified": false
+ }
+]

@@ -1,0 +1,291 @@
+{
+ "version": "mini-graph-1",
+ "note": "HAND-WRITTEN test graph (M4). Not the lab fixture.",
+ "artefacts": [
+  {
+   "artefact_id": "m01",
+   "type": "raw_video",
+   "subject_ids": [
+    "mini_alice"
+   ],
+   "parent_ids": [],
+   "uri": "mock://mini/raw_video/m01",
+   "owner": "data-platform",
+   "acl": [
+    "data-platform"
+   ],
+   "legal_hold": "LH-MINI-1",
+   "origin_known": true,
+   "created_at": "2026-09-01"
+  },
+  {
+   "artefact_id": "m02",
+   "type": "frame",
+   "subject_ids": [
+    "mini_alice"
+   ],
+   "parent_ids": [
+    "m01"
+   ],
+   "uri": "mock://mini/frame/m02",
+   "owner": "data-platform",
+   "acl": [
+    "data-platform"
+   ],
+   "legal_hold": null,
+   "origin_known": true,
+   "created_at": "2026-09-01"
+  },
+  {
+   "artefact_id": "m03",
+   "type": "face_crop",
+   "subject_ids": [
+    "mini_alice"
+   ],
+   "parent_ids": [
+    "m02"
+   ],
+   "uri": "mock://mini/face_crop/m03",
+   "owner": "data-platform",
+   "acl": [
+    "data-platform"
+   ],
+   "legal_hold": null,
+   "origin_known": true,
+   "created_at": "2026-09-01"
+  },
+  {
+   "artefact_id": "m04",
+   "type": "embedding",
+   "subject_ids": [
+    "mini_alice"
+   ],
+   "parent_ids": [
+    "m03"
+   ],
+   "uri": "mock://mini/embedding/m04",
+   "owner": "data-platform",
+   "acl": [
+    "data-platform"
+   ],
+   "legal_hold": null,
+   "origin_known": false,
+   "created_at": "2026-09-01"
+  },
+  {
+   "artefact_id": "m05",
+   "type": "backup",
+   "subject_ids": [
+    "mini_alice"
+   ],
+   "parent_ids": [
+    "m01"
+   ],
+   "uri": "mock://mini/backup/m05",
+   "owner": "data-platform",
+   "acl": [
+    "vendor-x"
+   ],
+   "legal_hold": null,
+   "origin_known": true,
+   "created_at": "2026-09-01"
+  },
+  {
+   "artefact_id": "m06",
+   "type": "frame",
+   "subject_ids": [
+    "mini_alice",
+    "mini_bob"
+   ],
+   "parent_ids": [
+    "m01"
+   ],
+   "uri": "mock://mini/frame/m06",
+   "owner": "data-platform",
+   "acl": [
+    "data-platform"
+   ],
+   "legal_hold": null,
+   "origin_known": true,
+   "created_at": "2026-09-01"
+  },
+  {
+   "artefact_id": "m07",
+   "type": "face_crop",
+   "subject_ids": [
+    "mini_bob"
+   ],
+   "parent_ids": [
+    "m06"
+   ],
+   "uri": "mock://mini/face_crop/m07",
+   "owner": "data-platform",
+   "acl": [
+    "data-platform"
+   ],
+   "legal_hold": null,
+   "origin_known": true,
+   "created_at": "2026-09-01"
+  },
+  {
+   "artefact_id": "m08",
+   "type": "embedding",
+   "subject_ids": [
+    "mini_bob"
+   ],
+   "parent_ids": [
+    "m07"
+   ],
+   "uri": "mock://mini/embedding/m08",
+   "owner": "data-platform",
+   "acl": [
+    "data-platform"
+   ],
+   "legal_hold": null,
+   "origin_known": true,
+   "created_at": "2026-09-01"
+  },
+  {
+   "artefact_id": "m09",
+   "type": "raw_video",
+   "subject_ids": [
+    "mini_bob"
+   ],
+   "parent_ids": [],
+   "uri": "mock://mini/raw_video/m09",
+   "owner": "data-platform",
+   "acl": [
+    "data-platform"
+   ],
+   "legal_hold": null,
+   "origin_known": true,
+   "created_at": "2026-09-01"
+  },
+  {
+   "artefact_id": "m10",
+   "type": "frame",
+   "subject_ids": [
+    "mini_bob"
+   ],
+   "parent_ids": [
+    "m09"
+   ],
+   "uri": "mock://mini/frame/m10",
+   "owner": "data-platform",
+   "acl": [
+    "data-platform"
+   ],
+   "legal_hold": null,
+   "origin_known": true,
+   "created_at": "2026-09-01"
+  },
+  {
+   "artefact_id": "m11",
+   "type": "raw_video",
+   "subject_ids": [
+    "mini_cara"
+   ],
+   "parent_ids": [],
+   "uri": "mock://mini/raw_video/m11",
+   "owner": "data-platform",
+   "acl": [
+    "data-platform"
+   ],
+   "legal_hold": null,
+   "origin_known": true,
+   "created_at": "2026-09-01"
+  },
+  {
+   "artefact_id": "m12",
+   "type": "frame",
+   "subject_ids": [
+    "mini_cara"
+   ],
+   "parent_ids": [
+    "m11"
+   ],
+   "uri": "mock://mini/frame/m12",
+   "owner": "data-platform",
+   "acl": [
+    "data-platform"
+   ],
+   "legal_hold": null,
+   "origin_known": true,
+   "created_at": "2026-09-01"
+  },
+  {
+   "artefact_id": "m13",
+   "type": "face_crop",
+   "subject_ids": [
+    "mini_cara"
+   ],
+   "parent_ids": [
+    "m12"
+   ],
+   "uri": "mock://mini/face_crop/m13",
+   "owner": "data-platform",
+   "acl": [
+    "data-platform"
+   ],
+   "legal_hold": "LH-MINI-2",
+   "origin_known": true,
+   "created_at": "2026-09-01"
+  },
+  {
+   "artefact_id": "m14",
+   "type": "training_export",
+   "subject_ids": [
+    "mini_alice",
+    "mini_bob",
+    "mini_cara"
+   ],
+   "parent_ids": [
+    "m03",
+    "m10",
+    "m12"
+   ],
+   "uri": "mock://mini/training_export/m14",
+   "owner": "data-platform",
+   "acl": [
+    "data-platform"
+   ],
+   "legal_hold": null,
+   "origin_known": true,
+   "created_at": "2026-09-01"
+  },
+  {
+   "artefact_id": "m15",
+   "type": "embedding",
+   "subject_ids": [
+    "mini_bob"
+   ],
+   "parent_ids": [
+    "zz_missing"
+   ],
+   "uri": "mock://mini/embedding/m15",
+   "owner": "data-platform",
+   "acl": [
+    "data-platform"
+   ],
+   "legal_hold": null,
+   "origin_known": true,
+   "created_at": "2026-09-01"
+  },
+  {
+   "artefact_id": "m16",
+   "type": "raw_video",
+   "subject_ids": [
+    "mini_dave"
+   ],
+   "parent_ids": [],
+   "uri": "mock://mini/raw_video/m16",
+   "owner": "data-platform",
+   "acl": [
+    "data-platform"
+   ],
+   "legal_hold": null,
+   "origin_known": true,
+   "created_at": "2026-09-01"
+  }
+ ]
+}
