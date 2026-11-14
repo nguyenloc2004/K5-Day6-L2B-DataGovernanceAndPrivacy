@@ -65,8 +65,14 @@ def test_mini_gold_scope_is_exactly_subject_membership():
 def test_mini_gold_covers_every_action_and_rule():
     g = _gold()
     assert set(g.expected_action) == set(ACTIONS)
-    assert REASONS - {"DERIVED_FROM_HELD"} == set(g.expected_reason)          # direct mode: R6 never fires
-    assert "DERIVED_FROM_HELD" in set(_gold("expected_actions_descendants.csv").expected_reason)
+    assert set(g.expected_reason) == REASONS                                   # direct mode exercises every rule
+    held = g[g.expected_reason == "DERIVED_FROM_HELD"]
+    assert set(held.expected_action) == {"delete"}                             # Q1 direct: derivative is deleted, flagged for review
+    d = _gold("expected_actions_descendants.csv")
+    assert set(d[d.expected_reason == "DERIVED_FROM_HELD"].expected_action) == {"retain_legal_hold"}   # ablation: hold propagates
+    changed = g.merge(d, on=["request_id", "artefact_id"], suffixes=("_direct", "_desc"))
+    changed = changed[changed.expected_action_direct != changed.expected_action_desc]
+    assert set(changed.artefact_id) == set(held.artefact_id), "the two modes must differ exactly on held-derived rows"
 
 
 def test_mini_graph_contains_each_trap():

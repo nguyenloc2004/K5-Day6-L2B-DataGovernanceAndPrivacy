@@ -30,11 +30,11 @@ Yêu cầu: MR-1 = alice, MR-2 = bob, MR-3 = cara (`identity_verified: false`). 
 | Artefact | Bẫy / luật | Đáp án |
 |---|---|---|
 | m01 | B1 legal hold | MR-1: `retain_legal_hold` |
-| m02, m03 | B2 con của artefact bị hold, bản thân `legal_hold = null` | MR-1: `delete` (Q1 = direct) |
+| m02, m03 | B2 con của artefact bị hold, bản thân `legal_hold = null` | MR-1: `delete` (Q1 = direct), reason `DERIVED_FROM_HELD` để lên đầu hàng duyệt |
 | m04 | B3 không rõ nguồn | MR-1: `escalate` UNKNOWN_ORIGIN |
 | m05 | B4 `acl` không có `data-platform` | MR-1: `escalate` NO_DELETE_PERMISSION |
 | m06 | B5 nhiều chủ thể | MR-1 và MR-2: `escalate` MULTI_SUBJECT |
-| m07, m08 | **B6**: con của m06 nhưng chỉ thuộc bob | MR-1: **không có dòng** (ngoài phạm vi). MR-2: `delete` |
+| m07, m08 | **B6**: con của m06 nhưng chỉ thuộc bob. m06 lại là con của m01 đang bị hold | MR-1: **không có dòng** (ngoài phạm vi). MR-2: `delete`, reason `DERIVED_FROM_HELD` |
 | m09, m10 | Trường hợp xóa bình thường | MR-2: `delete` |
 | m11, m12 | Danh tính chưa xác minh (R2) | MR-3: `escalate` IDENTITY_UNVERIFIED |
 | m13 | R1 đứng trước R2: có hold thì giữ dù danh tính chưa xác minh | MR-3: `retain_legal_hold` |
@@ -47,8 +47,8 @@ Yêu cầu: MR-1 = alice, MR-2 = bob, MR-3 = cara (`identity_verified: false`). 
 | File | Dùng cho |
 |---|---|
 | `data_graph.json`, `requests.json`, `manifest.csv` | Đầu vào (manifest có sha256 vì `strict_provenance: true`) |
-| `expected_actions.csv` | Đáp án với `hold_scope: direct` (cấu hình đã chốt). Cột `expected_reason` là `reason_code` kỳ vọng |
-| `expected_actions_descendants.csv` | Đáp án với `hold_scope: descendants`, dùng cho ablation của M3. Khác bản trên ở 4 dòng: MR-1 m02, m03 và MR-2 m07, m08 thành `retain_legal_hold` / DERIVED_FROM_HELD |
+| `expected_actions.csv` | Đáp án với `hold_scope: direct` (cấu hình đã chốt). Cột `expected_reason` là `reason_code` kỳ vọng. Theo PLAN_T08 §3, bản phái sinh của artefact bị hold vẫn `delete` nhưng mang reason `DERIVED_FROM_HELD` |
+| `expected_actions_descendants.csv` | Đáp án với `hold_scope: descendants`, dùng cho ablation của M3. Khác bản trên ở đúng 4 dòng: MR-1 m02, m03 và MR-2 m07, m08 đổi action từ `delete` thành `retain_legal_hold` (reason giữ nguyên `DERIVED_FROM_HELD`) |
 
 Cột `request_id, artefact_id, expected_action` cùng định dạng với `gt_actions.csv` của giảng viên nên có thể đưa vào
 `src.metrics.tracks.eval_t08`. Đáp án được viết tay từ bảng luật PLAN_T08 §4.3 rồi đối chiếu độc lập bằng một oracle tạm
