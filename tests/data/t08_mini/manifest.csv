@@ -1,0 +1,3 @@
+file_id,path,source,license,split,group_id,sha256
+data_graph,data_graph.json,hand-written by M4 (tests/data/t08_mini),CC0-1.0,na,na,2cccc504dd4ce04f63443de07541f6369b22912258fcaf1590a825fbe60d050b
+requests,requests.json,hand-written by M4 (tests/data/t08_mini),CC0-1.0,na,na,3509063e5b4b373288e9a72c1be0266ea2fcda2e3cf54c4d6aac69031af9bc76
