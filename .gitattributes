@@ -1,0 +1,3 @@
+# Fixtures are verified by sha256 in manifest.csv: never convert their line endings
+# (Windows core.autocrlf=true would rewrite them to CRLF and break the provenance check).
+fixtures/** -text
