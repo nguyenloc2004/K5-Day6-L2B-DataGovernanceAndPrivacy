@@ -12,14 +12,17 @@ Rules: never read fixtures/*/gt/; no network; no hard-coded artefact ids (graded
 """
 from __future__ import annotations
 
+import sys
+
 import pandas as pd
 
+from .common.contact_sheet import render_contact_sheet
 from .common.context import RunContext
 from .common.decision import Decision, write_decision
 from .common.manifest import verify_manifest
 from .common.review import load_review_decisions, make_review_queue, write_review_queue
 from .metrics.tracks import get_track
-from .t08 import audit, lineage, loader, policy
+from .t08 import audit, dashboard, lineage, loader, policy
 from .t08.contracts import ACTIONS, SCORED_COLUMNS, item_id
 
 
@@ -72,6 +75,8 @@ def rank(ctx: RunContext, scored: pd.DataFrame) -> pd.DataFrame:
     q = make_review_queue(ordered, id_col="item_id", score_col="score", budget=budget,
                           reason_col="reason", action_col="action", slice_col="type")
     write_review_queue(q, ctx.out("review_queue.csv"))
+    render_contact_sheet(q, ctx.out("contact_sheet.html"), image_col=None,
+                         title=f"T08 · Hàng chờ duyệt yêu cầu xóa (B={budget})")
     ctx.stats["n_queue"] = len(q)
     return q
 
@@ -83,6 +88,8 @@ def review(ctx: RunContext, scored: pd.DataFrame, queue: pd.DataFrame) -> pd.Dat
     ctx.stats["n_reviewed"] = 0 if reviewed is None else len(reviewed)
     final = audit.apply_review(ctx, scored, reviewed)
     audit.write_audit(ctx, final)
+    reviewed_ids = set() if reviewed is None else set(reviewed["item_id"].astype(str))
+    ctx.stats["n_pending_review"] = int(((final["action"] == "escalate") & ~final["item_id"].isin(reviewed_ids)).sum())
     return final
 
 
@@ -90,7 +97,7 @@ def review(ctx: RunContext, scored: pd.DataFrame, queue: pd.DataFrame) -> pd.Dat
 def decide(ctx: RunContext, final: pd.DataFrame) -> Decision:
     owner = ctx.config.get("owner", "TODO-owner")
     counts = final["action"].value_counts().to_dict()
-    pending = int((final["action"] == "escalate").sum()) - int(ctx.stats.get("n_reviewed", 0))
+    pending = int(ctx.stats.get("n_pending_review", (final["action"] == "escalate").sum()))
     if ctx.stats.get("n_data_warnings", 0):
         return Decision(status="HOLD", reason_code="DATA_WARNINGS", owner=owner, scope=ctx.track, metrics=counts,
                         reason=f"{ctx.stats['n_data_warnings']} lineage/data warnings must be resolved before deleting")
@@ -113,3 +120,14 @@ def run(ctx: RunContext) -> None:
     extra = [c for c in final.columns if c not in spec.pred_columns]
     final[spec.pred_columns + extra].to_csv(ctx.out(spec.pred_file), index=False)
     write_decision(decide(ctx, final), ctx.out("decision.json"), ctx.out("decision_log.csv"))
+    _render_demo(ctx, final, data)
+
+
+def _render_demo(ctx: RunContext, final: pd.DataFrame, data: dict) -> None:
+    """Demo console (docs/PLAN_DEMO_T08.md). Never allowed to break the graded run."""
+    try:
+        path = dashboard.render_dashboard(ctx, final, data)
+        ctx.stats["dashboard"] = str(path)
+    except Exception as e:  # noqa: BLE001 — the dashboard is optional; actions.csv is already written
+        ctx.audit.log(actor="pipeline", action="dashboard_failed", item_id="dashboard.html", reason=repr(e))
+        print(f"[pipeline] WARNING: dashboard not generated: {e!r}", file=sys.stderr)

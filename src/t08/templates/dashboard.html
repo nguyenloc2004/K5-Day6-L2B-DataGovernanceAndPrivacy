@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DSR Console · T08</title>
+<style>
+:root{
+  --bg:#f4f6f9; --panel:#ffffff; --ink:#1d2433; --muted:#667085; --line:#e3e7ee; --accent:#2f5bea;
+  --del:#1f9d55; --del-bg:#e7f6ee; --hold:#b7791f; --hold-bg:#fdf3e1; --esc:#dd6b20; --esc-bg:#fdeee3;
+  --ctx:#5a6b85; --ctx-bg:#eef2f7; --oos:#9aa3b2; --oos-bg:#f3f4f6; --bad:#c53030; --bad-bg:#fdecec;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+header{background:#141b2d;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+header h1{font-size:18px;margin:0;font-weight:600}
+header .sub{color:#aab4c8;font-size:12px}
+header .spacer{flex:1}
+.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.b-go{background:#d5f5e3;color:#11643a}.b-hold{background:#fde2c7;color:#8a3b00}
+.b-del{background:var(--del-bg);color:var(--del)}.b-ret{background:var(--hold-bg);color:var(--hold)}
+.b-esc{background:var(--esc-bg);color:var(--esc)}.b-ctx{background:var(--ctx-bg);color:var(--ctx)}
+.b-oos{background:var(--oos-bg);color:var(--oos)}.b-bad{background:var(--bad-bg);color:var(--bad)}
+.b-ok{background:#e6effd;color:#2346a8}
+nav{display:flex;gap:4px;padding:0 24px;background:#1d2640}
+nav button{background:none;border:0;color:#c7cfe0;padding:11px 16px;font-size:14px;cursor:pointer;border-bottom:3px solid transparent}
+nav button.on{color:#fff;border-bottom-color:#7aa2ff}
+main{padding:20px 24px;max-width:1500px;margin:0 auto}
+.tab{display:none}.tab.on{display:block}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi .v{font-size:26px;font-weight:700}.kpi .l{color:var(--muted);font-size:12px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.panel h2{font-size:15px;margin:0 0 10px}
+.muted{color:var(--muted)} .small{font-size:12px}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600;background:#fafbfd;position:sticky;top:0}
+tr.click{cursor:pointer} tr.click:hover{background:#f5f8ff}
+.mono{font-family:Consolas,"Cascadia Mono",monospace;font-size:12px}
+.row{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.grow{flex:1;min-width:320px}
+.treebox{overflow:auto;border:1px solid var(--line);border-radius:8px;background:#fbfcfe;max-height:640px}
+.side{width:340px;min-width:280px}
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 10px;font-size:12px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.sw{width:14px;height:14px;border-radius:3px;border:2px solid}
+select,input{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.btn{display:inline-block;background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px 14px;cursor:pointer;text-decoration:none;font-size:14px}
+.btn.ghost{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.filters button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 10px;cursor:pointer;font-size:12px}
+.filters button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 10px;font-size:13px}
+.kv div:nth-child(odd){color:var(--muted)}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.step{border:1px dashed var(--line);border-radius:8px;padding:10px}
+.step b{display:block;margin-bottom:4px}
+.days-bad{color:var(--bad);font-weight:600}.days-warn{color:var(--esc);font-weight:600}
+.flow{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 2px}
+.flow span{font-size:11px;padding:3px 8px;border-radius:4px;background:#eef1f6;color:var(--muted)}
+.flow span.done{background:#dfe9ff;color:#2346a8}
+.flow span.now{background:var(--esc-bg);color:var(--esc);font-weight:600}
+svg text{font-family:"Segoe UI",system-ui,sans-serif}
+.node{cursor:pointer}
+.node:hover rect{filter:brightness(.97)}
+.node.sel rect{stroke-width:3}
+footer{color:var(--muted);font-size:12px;text-align:center;padding:16px}
+.empty{color:var(--muted);font-style:italic;padding:8px 0}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>DSR Console · Xử lý yêu cầu xóa dữ liệu</h1>
+    <div class="sub" id="hdr-sub"></div>
+  </div>
+  <div class="spacer"></div>
+  <div id="hdr-decision"></div>
+</header>
+<nav id="nav">
+  <button data-tab="inbox" class="on">1 · Hộp yêu cầu</button>
+  <button data-tab="detail">2 · Chi tiết &amp; cây dữ liệu</button>
+  <button data-tab="review">3 · Hàng chờ duyệt</button>
+  <button data-tab="audit">4 · Nhật ký kiểm toán</button>
+  <button data-tab="results">5 · Kết quả</button>
+</nav>
+<main>
+  <section class="tab on" id="tab-inbox"></section>
+  <section class="tab" id="tab-detail"></section>
+  <section class="tab" id="tab-review"></section>
+  <section class="tab" id="tab-audit"></section>
+  <section class="tab" id="tab-results"></section>
+</main>
+<footer id="foot"></footer>
+
+<script id="dsr-data" type="application/json">/*__DSR_DATA__*/null</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("dsr-data").textContent);
+
+const ACTION = {
+  delete:{label:"Xóa", cls:"b-del", fill:"var(--del-bg)", stroke:"var(--del)"},
+  retain_legal_hold:{label:"Giữ (legal hold)", cls:"b-ret", fill:"var(--hold-bg)", stroke:"var(--hold)"},
+  escalate:{label:"Chờ người duyệt", cls:"b-esc", fill:"var(--esc-bg)", stroke:"var(--esc)"},
+  context:{label:"Ngữ cảnh (không thuộc yêu cầu)", cls:"b-ctx", fill:"var(--ctx-bg)", stroke:"var(--ctx)"},
+  out_of_scope:{label:"Ngoài phạm vi · không xóa", cls:"b-oos", fill:"var(--oos-bg)", stroke:"var(--oos)"}
+};
+const REASON = {
+  LEGAL_HOLD_ACTIVE:"Đang có lệnh giữ pháp lý",
+  IDENTITY_UNVERIFIED:"Chưa xác minh danh tính người yêu cầu",
+  NO_DELETE_PERMISSION:"Không có quyền xóa (bên khác quản lý)",
+  UNKNOWN_ORIGIN:"Không rõ nguồn gốc dữ liệu",
+  MULTI_SUBJECT:"Chứa dữ liệu của nhiều người",
+  DERIVED_FROM_HELD:"Sinh ra từ dữ liệu đang bị giữ",
+  SUBJECT_ONLY:"Chỉ thuộc về người yêu cầu"
+};
+const STATUS = {
+  unverified:{label:"Chờ xác minh danh tính", cls:"b-bad"},
+  pending_review:{label:"Chờ duyệt", cls:"b-esc"},
+  ready:{label:"Sẵn sàng thực thi", cls:"b-ok"},
+  executed:{label:"Đã thực thi", cls:"b-del"}
+};
+const FLAG = {hold:"🔒", multi:"👥", unknown_origin:"❓", no_acl:"🏢"};
+const FLAG_LABEL = {hold:"legal hold", multi:"nhiều chủ thể", unknown_origin:"không rõ nguồn gốc", no_acl:"bên khác quản lý"};
+const TYPE = {raw_video:"Video gốc", backup:"Sao lưu", frame:"Ảnh cắt", face_crop:"Ảnh mặt",
+              embedding:"Embedding", annotation:"Nhãn", training_export:"Bộ train"};
+
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const badge = (txt, cls) => `<span class="badge ${cls}">${esc(txt)}</span>`;
+const actBadge = a => badge((ACTION[a]||{}).label || a, (ACTION[a]||{}).cls || "b-ctx");
+const reasonTxt = r => REASON[r] ? `${REASON[r]} <span class="muted mono">${esc(r)}</span>` : esc(r);
+const fmtDate = s => { if(!s) return ""; const d = new Date(s); return isNaN(d) ? esc(s) : d.toLocaleDateString("vi-VN"); };
+const $ = id => document.getElementById(id);
+let current = (D.requests[0] || {}).request_id;
+let selectedNode = null;
+let rowFilter = "all";
+
+/* ---------------------------------------------------------------- header */
+function renderHeader(){
+  const r = D.run, dec = D.decision || {};
+  $("hdr-sub").innerHTML = `Nhóm ${esc(r.group_id)} · seed ${esc(r.seed)} · ${r.offline ? "offline" : "online"} · ` +
+    `${r.dry_run ? "chế độ <b>dry-run</b> (chưa xóa thật)" : "<b>đã thực thi</b> (mock)"} · ` +
+    `hold_scope=${esc(r.hold_scope)} · commit ${esc(r.git_sha || "?")} · dữ liệu tính đến ${fmtDate(r.as_of)}`;
+  const st = (dec.canonical || dec.status || "").toUpperCase();
+  $("hdr-decision").innerHTML = st ? `${badge(st, st === "GO" ? "b-go" : "b-hold")}
+     <span class="small" style="color:#d6dcea;margin-left:6px">${esc(dec.reason_code)} · ký: ${esc(dec.owner)}</span>` : "";
+  $("foot").textContent = `Sinh tự động lúc ${r.generated_at} từ output của lần chạy (${r.input}). ` +
+    `Dữ liệu giả lập, không xóa dữ liệu thật. Kết luận pháp lý cần DPO/pháp chế xác nhận.`;
+}
+
+/* ---------------------------------------------------------------- tab 1 */
+function renderInbox(){
+  const tot = {items:0, delete:0, retain_legal_hold:0, escalate:0, pending:0, derived:0};
+  D.requests.forEach(q => { tot.items += q.n_items; tot.pending += q.pending; tot.derived += q.derived_from_held;
+    for (const a of ["delete","retain_legal_hold","escalate"]) tot[a] += q.counts[a]; });
+  const dec = D.decision || {};
+  let h = `<div class="kpis">
+    <div class="kpi"><div class="v">${D.requests.length}</div><div class="l">Yêu cầu xóa đang mở</div></div>
+    <div class="kpi"><div class="v">${tot.items}</div><div class="l">Artefact trong phạm vi (trên ${D.run.n_artefacts})</div></div>
+    <div class="kpi"><div class="v" style="color:var(--del)">${tot.delete}</div><div class="l">Sẽ xóa${tot.derived ? ` · ${tot.derived} cần lưu ý` : ""}</div></div>
+    <div class="kpi"><div class="v" style="color:var(--hold)">${tot.retain_legal_hold}</div><div class="l">Giữ theo legal hold</div></div>
+    <div class="kpi"><div class="v" style="color:var(--esc)">${tot.escalate}</div><div class="l">Chuyển người duyệt · còn ${tot.pending} chưa duyệt</div></div>
+  </div>`;
+  h += `<div class="panel"><h2>Kết luận đợt xử lý</h2>
+    <div>${badge((dec.canonical||dec.status||"?"), (dec.canonical||dec.status)==="GO"?"b-go":"b-hold")}
+    <b style="margin-left:6px">${esc(dec.reason_code)}</b> — ${esc(dec.reason)}</div>
+    <div class="small muted" style="margin-top:4px">Người ký: ${esc(dec.owner)} · ${esc(dec.ts)}</div></div>`;
+  h += `<div class="panel"><h2>Hộp yêu cầu</h2><table><thead><tr>
+    <th>Mã</th><th>Chủ thể</th><th>Kênh</th><th>Nhận</th><th>Hạn chót</th><th>Còn</th><th>Danh tính</th>
+    <th>Trạng thái</th><th>Xóa</th><th>Giữ</th><th>Duyệt</th></tr></thead><tbody>`;
+  for (const q of D.requests){
+    const st = STATUS[q.status] || {label:q.status, cls:"b-ctx"};
+    const dl = q.days_left;
+    const dcls = dl === null ? "" : dl < 0 ? "days-bad" : dl < 7 ? "days-warn" : "";
+    h += `<tr class="click" data-req="${esc(q.request_id)}">
+      <td class="mono"><b>${esc(q.request_id)}</b></td><td class="mono">${esc(q.subject_id)}</td><td>${esc(q.channel)}</td>
+      <td>${fmtDate(q.received_at)}</td><td>${fmtDate(q.deadline)}</td>
+      <td class="${dcls}">${dl === null ? "?" : dl < 0 ? `trễ ${-dl} ngày` : `${dl} ngày`}</td>
+      <td>${q.identity_verified ? badge("Đã xác minh","b-ok") : badge("Chưa","b-bad")}</td>
+      <td>${badge(st.label + (q.status==="pending_review" ? ` (${q.pending})` : ""), st.cls)}</td>
+      <td>${q.counts.delete}</td><td>${q.counts.retain_legal_hold}</td><td>${q.counts.escalate}</td></tr>`;
+  }
+  h += `</tbody></table><div class="small muted" style="margin-top:6px">Bấm một dòng để xem chi tiết và cây dữ liệu.</div></div>`;
+  $("tab-inbox").innerHTML = h;
+  $("tab-inbox").querySelectorAll("tr[data-req]").forEach(tr => tr.onclick = () => { current = tr.dataset.req; selectedNode = null; rowFilter = "all"; show("detail"); });
+}
+
+/* ---------------------------------------------------------------- tab 2 */
+function flowFor(q){
+  const steps = [["Tiếp nhận",1],["Xác minh danh tính",q.identity_verified?1:0],["Truy tìm dữ liệu",1],["Kế hoạch (dry-run)",1],
+                 ["Người duyệt",q.pending===0?1:0],["Thực thi",q.status==="executed"?1:0]];
+  let now = steps.findIndex(s => !s[1]);
+  return `<div class="flow">${steps.map((s,i) => `<span class="${s[1] ? "done" : i===now ? "now" : ""}">${i+1}. ${s[0]}</span>`).join("")}</div>`;
+}
+
+function renderTree(t){
+  const W = t.node_w, H = t.node_h, pos = {};
+  t.nodes.forEach(n => pos[n.id] = n);
+  let s = `<svg width="${t.width}" height="${t.height}" viewBox="0 0 ${t.width} ${t.height}">`;
+  s += `<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#a0aec0"/></marker></defs>`;
+  for (const [p, c] of t.edges){
+    const a = pos[p], b = pos[c]; if(!a || !b) continue;
+    const x1 = a.x + W, y1 = a.y + H/2, x2 = b.x - 2, y2 = b.y + H/2, mx = (x1 + x2) / 2;
+    const dim = b.status === "out_of_scope" || a.status === "context";
+    s += `<path d="M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}" fill="none" stroke="${dim ? "#cbd2dc" : "#a0aec0"}" stroke-width="1.5" ${dim ? 'stroke-dasharray="4 3"' : ""} marker-end="url(#arr)"/>`;
+  }
+  for (const n of t.nodes){
+    const st = ACTION[n.status] || ACTION.context;
+    const dashed = n.status === "out_of_scope" || n.status === "context" || n.reason === "DERIVED_FROM_HELD";
+    const flags = n.flags.map(f => FLAG[f] || "").join("");
+    const extra = n.hidden_parents ? ` +${n.hidden_parents} nguồn` : "";
+    s += `<g class="node${selectedNode===n.id?" sel":""}" data-id="${esc(n.id)}" opacity="${n.status==="out_of_scope"?0.75:1}">
+      <title>${esc(n.id)} · ${esc(TYPE[n.type]||n.type)} · ${esc(st.label)}</title>
+      <rect x="${n.x}" y="${n.y}" width="${W}" height="${H}" rx="7" fill="${st.fill}" stroke="${st.stroke}" stroke-width="1.6" ${dashed ? 'stroke-dasharray="5 3"' : ""}/>
+      <text x="${n.x+9}" y="${n.y+14}" font-size="11" font-weight="600" fill="#1d2433">${esc(TYPE[n.type]||n.type)}${esc(extra)}</text>
+      <text x="${n.x+9}" y="${n.y+27}" font-size="10.5" fill="#556070" font-family="Consolas,monospace">${esc(n.id)}${n.subject_ids.length>1?` · ${n.subject_ids.length} người`:""}</text>
+      <text x="${n.x+W-7}" y="${n.y+21}" font-size="13" text-anchor="end">${flags}</text></g>`;
+  }
+  return s + `</svg>`;
+}
+
+function nodePanel(t, q){
+  const n = t.nodes.find(x => x.id === selectedNode);
+  if (!n) return `<div class="panel"><h2>Chi tiết artefact</h2><div class="empty">Bấm vào một ô trên cây để xem vì sao hệ thống quyết định như vậy.</div></div>`;
+  const st = ACTION[n.status] || ACTION.context;
+  let why = "";
+  if (n.status === "out_of_scope") why = `Artefact này chỉ chứa dữ liệu của ${esc(n.subject_ids.join(", "))}, không phải ${esc(q.subject_id)}. Dù nằm dưới một node của người yêu cầu, nó <b>không được xóa</b>.`;
+  else if (n.status === "context") why = `Hiển thị để thấy nguồn gốc. Artefact này không chứa dữ liệu của ${esc(q.subject_id)} nên không thuộc yêu cầu.`;
+  else why = reasonTxt(n.reason) + (n.rule_id ? ` · luật <b>${esc(n.rule_id)}</b>` : "");
+  return `<div class="panel"><h2>Chi tiết artefact</h2>
+    <div style="margin-bottom:8px">${badge(st.label, st.cls)}</div>
+    <div style="margin-bottom:10px">${why}</div>
+    <div class="kv">
+      <div>ID</div><div class="mono">${esc(n.id)}</div>
+      <div>Loại</div><div>${esc(TYPE[n.type]||n.type)} <span class="muted mono">${esc(n.type)}</span></div>
+      <div>Chủ thể</div><div class="mono">${esc(n.subject_ids.join(", "))}</div>
+      <div>Vị trí</div><div class="mono">${esc(n.uri)}</div>
+      <div>Quản lý / ACL</div><div class="mono">${esc(n.owner)} / ${esc((n.acl||[]).join(", "))}</div>
+      <div>Legal hold</div><div class="mono">${esc(n.legal_hold || "—")}${n.held_ancestor ? ` · tổ tiên: ${esc(n.held_ancestor)}` : ""}</div>
+      <div>Rõ nguồn gốc</div><div>${n.origin_known ? "Có" : "<b style='color:var(--bad)'>Không</b>"}</div>
+      <div>Đặc điểm</div><div>${n.flags.length ? n.flags.map(f => `${FLAG[f]} ${FLAG_LABEL[f]}`).join("<br>") : "—"}</div>
+      <div>Lineage</div><div class="mono">${esc(n.lineage_path || "—")}</div>
+    </div></div>`;
+}
+
+function renderDetail(){
+  const q = D.requests.find(x => x.request_id === current);
+  if (!q){ $("tab-detail").innerHTML = `<div class="empty">Không có yêu cầu.</div>`; return; }
+  const t = D.trees[current];
+  const rows = D.rows.filter(r => r.request_id === current && (rowFilter === "all" || r.action === rowFilter));
+  const st = STATUS[q.status] || {label:q.status, cls:"b-ctx"};
+  let h = `<div class="panel"><div class="row" style="align-items:center">
+      <label class="small muted">Yêu cầu&nbsp;<select id="req-pick">${D.requests.map(x => `<option ${x.request_id===current?"selected":""}>${esc(x.request_id)}</option>`).join("")}</select></label>
+      <div><b class="mono">${esc(q.request_id)}</b> · chủ thể <b class="mono">${esc(q.subject_id)}</b> · kênh ${esc(q.channel)}
+        · hạn ${fmtDate(q.deadline)} (${q.days_left===null?"?":q.days_left+" ngày"})</div>
+      <div>${badge(st.label + (q.pending ? ` (${q.pending})` : ""), st.cls)}</div>
+      <div>${actBadge("delete")} ${q.counts.delete} &nbsp; ${actBadge("retain_legal_hold")} ${q.counts.retain_legal_hold} &nbsp; ${actBadge("escalate")} ${q.counts.escalate}</div>
+    </div>${flowFor(q)}</div>`;
+  h += `<div class="row"><div class="grow"><div class="panel"><h2>Cây dữ liệu của ${esc(q.subject_id)}</h2>
+      <div class="legend">${["delete","retain_legal_hold","escalate","context","out_of_scope"].map(k =>
+        `<span><i class="sw" style="background:${ACTION[k].fill};border-color:${ACTION[k].stroke}"></i>${ACTION[k].label}</span>`).join("")}
+        <span>viền nét đứt = sinh ra từ dữ liệu bị giữ / không thuộc yêu cầu</span>
+        <span>${Object.keys(FLAG).map(f => `${FLAG[f]} ${FLAG_LABEL[f]}`).join(" · ")}</span></div>
+      <div class="treebox">${renderTree(t)}</div></div></div>
+    <div class="side">${nodePanel(t, q)}</div></div>`;
+  h += `<div class="panel"><h2>Các dòng trong actions.csv</h2><div class="filters">
+      ${[["all","Tất cả"],["delete","Xóa"],["retain_legal_hold","Giữ"],["escalate","Chờ duyệt"]].map(([k,l]) =>
+        `<button data-f="${k}" class="${rowFilter===k?"on":""}">${l}</button>`).join("")}</div>
+    <table><thead><tr><th>Artefact</th><th>Loại</th><th>Quyết định</th><th>Lý do</th><th>Luật</th><th>Người duyệt</th><th>Lineage</th></tr></thead><tbody>
+    ${rows.map(r => `<tr class="click" data-node="${esc(r.artefact_id)}"><td class="mono">${esc(r.artefact_id)}</td><td>${esc(TYPE[r.type]||r.type)}</td>
+      <td>${actBadge(r.action)}</td><td>${reasonTxt(r.reason)}</td><td class="mono">${esc(r.rule_id)}</td>
+      <td>${r.review ? `${esc(r.review.reviewer)}: <b>${esc(r.review.decision)}</b>` : "—"}</td>
+      <td class="mono small">${esc(r.lineage_path)}</td></tr>`).join("") || `<tr><td colspan="7" class="empty">Không có dòng.</td></tr>`}
+    </tbody></table></div>`;
+  $("tab-detail").innerHTML = h;
+  $("req-pick").onchange = e => { current = e.target.value; selectedNode = null; renderDetail(); };
+  $("tab-detail").querySelectorAll(".node").forEach(g => g.onclick = () => { selectedNode = g.dataset.id; renderDetail(); });
+  $("tab-detail").querySelectorAll("tr[data-node]").forEach(tr => tr.onclick = () => { selectedNode = tr.dataset.node; renderDetail(); window.scrollTo({top:0,behavior:"smooth"}); });
+  $("tab-detail").querySelectorAll(".filters button").forEach(b => b.onclick = () => { rowFilter = b.dataset.f; renderDetail(); });
+}
+
+/* ---------------------------------------------------------------- tab 3 */
+function renderReview(){
+  const reviewed = Object.fromEntries(D.rows.filter(r => r.review).map(r => [r.item_id, r.review]));
+  const pending = D.requests.reduce((s, q) => s + q.pending, 0);
+  let h = `<div class="kpis">
+    <div class="kpi"><div class="v">${D.queue.length}</div><div class="l">Dòng trong hàng chờ (B = ${D.run.budget})</div></div>
+    <div class="kpi"><div class="v">${Object.keys(reviewed).length}</div><div class="l">Đã có quyết định của người duyệt</div></div>
+    <div class="kpi"><div class="v" style="color:var(--esc)">${pending}</div><div class="l">Mục chuyển duyệt còn chờ</div></div></div>`;
+  h += `<div class="panel"><h2>Quy trình duyệt</h2><div class="steps">
+    <div class="step"><b>1 · Mở trang duyệt</b>Nhập tên người duyệt, chọn approve / reject / edit / escalate cho từng dòng, ghi lý do.
+      <div style="margin-top:8px">${D.has_contact_sheet ? `<a class="btn" href="contact_sheet.html" target="_blank">Mở trang duyệt</a>` : `<span class="muted">Chưa có contact_sheet.html</span>`}</div></div>
+    <div class="step"><b>2 · Export CSV</b>Bấm <i>Export decisions CSV</i>, lưu file thành <span class="mono">out/poc/review_queue_reviewed.csv</span>.
+      Muốn đổi quyết định: chọn <i>edit</i> và ghi action mới (delete / retain_legal_hold / escalate) vào ô override.</div>
+    <div class="step"><b>3 · Chạy lại lệnh</b><span class="mono small">python -m src.main --config configs/lab.yaml --track t08 --output out/poc --run-name poc --offline --seed 42</span>
+      <br>Quyết định được áp dụng, nhật ký ghi tên người duyệt, trang này cập nhật.</div></div></div>`;
+  h += `<div class="panel"><h2>Hàng chờ duyệt (ưu tiên: legal hold → phái sinh của dữ liệu bị giữ → chuyển duyệt; cùng mức thì hạn gần trước)</h2>
+    <table><thead><tr><th>#</th><th>Mục</th><th>Loại</th><th>Đề xuất</th><th>Lý do</th><th>Điểm</th><th>Người duyệt</th></tr></thead><tbody>
+    ${D.queue.map(r => { const rv = reviewed[r.item_id]; const [rid, aid] = String(r.item_id).split("|");
+      return `<tr class="click" data-req="${esc(rid)}" data-node="${esc(aid)}"><td>${esc(r.rank)}</td><td class="mono">${esc(r.item_id)}</td><td>${esc(TYPE[r.slice]||r.slice)}</td>
+      <td>${actBadge(r.suggested_action)}</td><td>${reasonTxt(r.reason)}</td><td>${esc(r.score)}</td>
+      <td>${rv ? `${esc(rv.reviewer)}: <b>${esc(rv.decision)}</b>${rv.note ? ` <span class="muted">— ${esc(rv.note)}</span>` : ""}` : badge("chưa duyệt","b-esc")}</td></tr>`; }).join("")}
+    </tbody></table></div>`;
+  $("tab-review").innerHTML = h;
+  $("tab-review").querySelectorAll("tr[data-req]").forEach(tr => tr.onclick = () => { current = tr.dataset.req; selectedNode = tr.dataset.node; rowFilter = "all"; show("detail"); });
+}
+
+/* ---------------------------------------------------------------- tab 4 */
+function renderAudit(){
+  const actors = [...new Set(D.audit.map(e => e.actor))];
+  let h = `<div class="panel"><h2>Nhật ký kiểm toán (append-only, ${D.audit.length} sự kiện)</h2>
+    <div class="row" style="margin-bottom:10px">
+      <label class="small muted">Yêu cầu <select id="au-req"><option value="">Tất cả</option>${D.requests.map(q => `<option>${esc(q.request_id)}</option>`).join("")}</select></label>
+      <label class="small muted">Người thực hiện <select id="au-actor"><option value="">Tất cả</option>${actors.map(a => `<option>${esc(a)}</option>`).join("")}</select></label>
+      <label class="small muted">Tìm <input id="au-q" placeholder="artefact, action, lý do…"></label>
+      <span class="small muted" id="au-n"></span></div>
+    <div style="max-height:620px;overflow:auto"><table><thead><tr><th>Thời gian (UTC)</th><th>Người thực hiện</th><th>Hành động</th><th>Mục</th><th>Yêu cầu</th><th>Trước → Sau</th><th>Lý do</th></tr></thead><tbody id="au-body"></tbody></table></div></div>`;
+  $("tab-audit").innerHTML = h;
+  const draw = () => {
+    const rq = $("au-req").value, ac = $("au-actor").value, text = $("au-q").value.toLowerCase();
+    const list = D.audit.filter(e => (!rq || (e.extra||{}).request_id === rq) && (!ac || e.actor === ac) &&
+      (!text || JSON.stringify(e).toLowerCase().includes(text))).slice().reverse();
+    $("au-n").textContent = `${list.length} sự kiện`;
+    $("au-body").innerHTML = list.slice(0, 800).map(e => `<tr><td class="mono small">${esc(e.ts)}</td>
+      <td>${e.actor === "pipeline" ? badge("pipeline","b-ctx") : badge(e.actor,"b-ok")}</td><td class="mono">${esc(e.action)}</td>
+      <td class="mono">${esc(e.item_id)}</td><td class="mono">${esc((e.extra||{}).request_id || "")}</td>
+      <td class="mono small">${e.before != null ? esc(typeof e.before === "object" ? JSON.stringify(e.before) : e.before) + " → " : ""}${esc(typeof e.after === "object" ? JSON.stringify(e.after) : e.after)}</td>
+      <td>${reasonTxt(e.reason)}</td></tr>`).join("") || `<tr><td colspan="7" class="empty">Không có sự kiện.</td></tr>`;
+  };
+  ["au-req","au-actor"].forEach(id => $(id).onchange = draw); $("au-q").oninput = draw; draw();
+}
+
+/* ---------------------------------------------------------------- tab 5 */
+function metricTable(m){
+  if (!m) return `<div class="empty">Chưa có file.</div>`;
+  return `<table><thead><tr><th>Metric</th><th>Giá trị</th><th>Định nghĩa</th></tr></thead><tbody>${(m.metrics||[]).map(x =>
+    `<tr><td>${esc(x.name)}${x.primary ? " <b>(chính)</b>" : ""}</td><td class="mono">${x.value === null || x.value === undefined ? "—" : esc(typeof x.value === "number" ? +x.value.toFixed(4) : x.value)}</td><td class="small muted">${esc(x.definition || x.unit || "")}</td></tr>`).join("")}</tbody></table>
+    <div class="small muted">git ${esc(m.git_sha)} · seed ${esc(m.seed)} · ${esc(m.created_at)}</div>`;
+}
+function renderResults(){
+  const poc = {n_rows: D.rows.length}; for (const a of ["delete","retain_legal_hold","escalate"]) poc[a] = D.rows.filter(r => r.action === a).length;
+  const b = D.baseline_counts;
+  let h = `<div class="panel"><h2>So sánh đầu ra: baseline và PoC (cùng input, seed ${esc(D.run.seed)})</h2>
+    <table><thead><tr><th></th><th>Baseline (chỉ xóa video gốc theo tên file)</th><th>PoC (lần chạy này)</th></tr></thead><tbody>
+    ${[["n_rows","Số dòng trong actions.csv"],["delete","Xóa"],["retain_legal_hold","Giữ (legal hold)"],["escalate","Chuyển duyệt"]].map(([k,l]) =>
+      `<tr><td>${l}</td><td class="mono">${b ? b[k] : "—"}</td><td class="mono">${poc[k]}</td></tr>`).join("")}
+    </tbody></table>
+    <div class="small muted" style="margin-top:6px">${b ? "Baseline đọc từ out/baseline/actions.csv." : "Chưa có out/baseline/actions.csv: chạy lệnh baseline trước để so sánh."}
+    Số đúng/sai chính thức (Deletion Completeness, False-delete) chỉ tính được với đáp án của giảng viên.</div></div>`;
+  h += `<div class="row"><div class="grow panel"><h2>Metric baseline (reports/metrics_baseline.json)</h2>${metricTable(D.metrics.baseline)}</div>
+        <div class="grow panel"><h2>Metric PoC (reports/metrics_poc.json)</h2>${metricTable(D.metrics.poc)}</div></div>`;
+  const r = D.run;
+  h += `<div class="panel"><h2>Tái lập</h2><div class="kv">
+    <div>Commit</div><div class="mono">${esc(r.git_sha)}</div><div>Seed</div><div class="mono">${esc(r.seed)}</div>
+    <div>Offline</div><div>${r.offline ? "Có" : "Không"}</div><div>Chế độ</div><div>${r.dry_run ? "dry-run" : "thực thi (mock)"}</div>
+    <div>hold_scope</div><div class="mono">${esc(r.hold_scope)}</div><div>Thời gian chạy</div><div class="mono">${r.runtime_seconds ?? "?"} s</div>
+    <div>Lệnh</div><div class="mono small">python -m src.main --config configs/lab.yaml --track t08 --output out/poc --run-name poc --offline --seed 42</div>
+    </div></div>`;
+  $("tab-results").innerHTML = h;
+}
+
+/* ---------------------------------------------------------------- nav */
+const RENDER = {inbox:renderInbox, detail:renderDetail, review:renderReview, audit:renderAudit, results:renderResults};
+function show(tab){
+  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
+  document.querySelectorAll(".tab").forEach(s => s.classList.toggle("on", s.id === "tab-" + tab));
+  RENDER[tab]();
+  if (location.hash !== "#" + tab) history.replaceState(null, "", "#" + tab);
+}
+document.querySelectorAll("#nav button").forEach(b => b.onclick = () => show(b.dataset.tab));
+renderHeader();
+show((location.hash || "#inbox").slice(1) in RENDER ? location.hash.slice(1) : "inbox");
+</script>
+</body>
+</html>
